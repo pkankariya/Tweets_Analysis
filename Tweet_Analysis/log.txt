@@ -1,0 +1,354 @@
+*****************************************************************************************
+Query for Languages
+SELECT lang, count(lang) as lang_count from tweet group by lang order by lang_count desc limit 5
++----+----------+
+|lang|lang_count|
++----+----------+
+|en  |87338     |
+|es  |6437      |
+|ja  |5268      |
+|und |2484      |
+|ko  |1669      |
++----+----------+
+
+*****************************************************************************************
+Query for Countries
+SELECT place.country, count(place.country) as country_count from tweet group by place.country order by country_count desc limit 5
++--------------+-------------+
+|country       |country_count|
++--------------+-------------+
+|United States |574          |
+|United Kingdom|34           |
+|Canada        |26           |
+|Australia     |21           |
+|Brasil        |15           |
++--------------+-------------+
+
+*****************************************************************************************
+Queries for Trending Hashtags
+tweet.select(org.apache.spark.sql.functions.explode(tweet.col("entities.hashtags")).as("hashtags_flat"))
++----------------------------------+
+|hashtags_flat                     |
++----------------------------------+
+|[[54, 60], Trump]                 |
+|[[16, 27], ÚLTIMAHORA]            |
+|[[104, 108], AFP]                 |
+|[[21, 44], WeAreIndivisiblePledge]|
+|[[99, 109], WagTheDog]            |
+|[[110, 120], TrumpsWar]           |
+|[[59, 69], Venezuela]             |
+|[[112, 119], Russia]              |
+|[[16, 21], ????]                  |
+|[[108, 122], WeAreTheMedia]       |
++----------------------------------+
+only showing top 10 rows
+
+flattened.select("hashtags_flat.text")
++----------------------+
+|text                  |
++----------------------+
+|Trump                 |
+|ÚLTIMAHORA            |
+|AFP                   |
+|WeAreIndivisiblePledge|
+|WagTheDog             |
+|TrumpsWar             |
+|Venezuela             |
+|Russia                |
+|????                  |
+|WeAreTheMedia         |
++----------------------+
+only showing top 10 rows
+
+SELECT text, count(text) as hashtags_count from hashtags group by text order by hashtags_count desc limit 10
++------------+--------------+
+|text        |hashtags_count|
++------------+--------------+
+|IndictTrump |1061          |
+|Trump       |892           |
+|Venezuela   |764           |
+|Cuba        |517           |
+|Putin       |472           |
+|MaduroRegime|434           |
+|Rosneft     |431           |
+|Mueller     |270           |
+|Barr        |247           |
+|MAGA        |226           |
++------------+--------------+
+
+*****************************************************************************************
+Queries for Trending Hashtag for Country
+tweet.select(tweet.col("place.country").as("country"), org.apache.spark.sql.functions.explode(tweet.col("entities.hashtags")).as("hashtags_flat"))
++-------+----------------------------------+
+|country|hashtags_flat                     |
++-------+----------------------------------+
+|null   |[[54, 60], Trump]                 |
+|null   |[[16, 27], ÚLTIMAHORA]            |
+|null   |[[104, 108], AFP]                 |
+|null   |[[21, 44], WeAreIndivisiblePledge]|
+|null   |[[99, 109], WagTheDog]            |
+|null   |[[110, 120], TrumpsWar]           |
+|null   |[[59, 69], Venezuela]             |
+|null   |[[112, 119], Russia]              |
+|null   |[[16, 21], ????]                  |
+|null   |[[108, 122], WeAreTheMedia]       |
++-------+----------------------------------+
+only showing top 10 rows
+
+flattened.select("country", "hashtags_flat.text").filter(flattened.col("country").isNotNull())
++-------------+----------------+
+|country      |text            |
++-------------+----------------+
+|United States|TeamTrump       |
+|United States|Trump           |
+|United States|Putin           |
+|United States|SemionMogilevich|
+|United States|Trump           |
+|United States|Greed           |
+|United States|GrifterInChief  |
+|United States|Washington      |
+|United States|Trump           |
+|United States|dumpthetrump    |
++-------------+----------------+
+only showing top 10 rows
+
+SELECT country, text, count(text) as hashtags_count from hashtags group by country, text
++--------------+-------------------+--------------+
+|country       |text               |hashtags_count|
++--------------+-------------------+--------------+
+|United States |JoeBiden           |1             |
+|Brazil        |STFVergonhaNacional|1             |
+|United States |NHL                |2             |
+|Cuba          |Cuba               |1             |
+|United States |IndictTrump        |4             |
+|United States |Woke               |1             |
+|United States |TrumpCrimeSyndicate|1             |
+|United States |1010WINS           |1             |
+|United Kingdom|BREXIT             |1             |
+|United States |Iwork4Dell         |1             |
++--------------+-------------------+--------------+
+only showing top 10 rows
+
+WITH cte as (select *, ROW_NUMBER() OVER (PARTITION BY country ORDER BY hashtags_count DESC) AS rn FROM hashtagscount) select * from cte where rn=1
++---------------+-------------------+--------------+---+
+|country        |text               |hashtags_count|rn |
++---------------+-------------------+--------------+---+
+|The Netherlands|Netflix            |1             |1  |
+|Italia         |Trento             |1             |1  |
+|India          |???_????_???_??    |1             |1  |
+|United States  |Trump              |6             |1  |
+|Nigeria        |creek              |1             |1  |
+|Cuba           |Cuba               |1             |1  |
+|Ireland        |LE2019             |1             |1  |
+|Canada         |Dangal2019         |1             |1  |
+|Brazil         |STFVergonhaNacional|1             |1  |
+|Australia      |JohnFaine          |1             |1  |
++---------------+-------------------+--------------+---+
+only showing top 10 rows
+
+*****************************************************************************************
+Queries for Verified Accounts
+SELECT count(*) from tweet where user.verified = true
++--------+
+|count(1)|
++--------+
+|1557    |
++--------+
+
+SELECT count(*) from tweet where user.verified = false
++--------+
+|count(1)|
++--------+
+|105599  |
++--------+
+
+*****************************************************************************************
+Queries for Verified Accounts By Country
+tweet.select("place.country", "user.verified").filter(tweet.col("place.country").isNotNull())
++-------------+--------+
+|country      |verified|
++-------------+--------+
+|United States|false   |
+|United States|false   |
+|United States|false   |
+|United States|false   |
+|Argentina    |false   |
+|Argentina    |false   |
+|Colombia     |false   |
+|United States|false   |
+|United States|false   |
+|United States|false   |
++-------------+--------+
+only showing top 10 rows
+
+select country, count(verified) as verified_count from verified_accounts where verified = true group by country
++------------------+--------------+
+|country           |verified_count|
++------------------+--------------+
+|Italia            |1             |
+|United States     |19            |
+|Canada            |1             |
+|Dominican Republic|1             |
+|Australia         |1             |
+|United Kingdom    |1             |
++------------------+--------------+
+
+*****************************************************************************************
+Query for Average Followers count of Verified Accounts By Languages
+SELECT lang, avg(user.followers_count) as avg_followers_count from tweet where user.verified = true group by user.verified, lang order by avg_followers_count desc
++----+-------------------+
+|lang|avg_followers_count|
++----+-------------------+
+|es  |1151266.4772727273 |
+|ar  |1053872.1818181819 |
+|fr  |790721.0           |
+|pt  |584706.0           |
+|in  |564492.5           |
+|ja  |421284.6153846154  |
+|ko  |392845.0           |
+|tr  |391808.3333333333  |
+|ur  |339572.0           |
+|it  |332299.0           |
++----+-------------------+
+only showing top 10 rows
+
+*****************************************************************************************
+Queries For Top 10 User Mentions
+tweet.select(org.apache.spark.sql.functions.explode(tweet.col("entities.user_mentions")).as("user_mentions_flat"))
++------------------------------------------------------------------+
+|user_mentions_flat                                                |
++------------------------------------------------------------------+
+|[33256808, 33256808, [3, 19], Julio Gonzalez, TaxReformExpert]    |
+|[1648180610, 1648180610, [3, 15], CGC | Santiago, CGCSantiago]    |
+|[18112970, 18112970, [3, 16], News Breaking LIVE, NewsBreaking]   |
+|[20626879, 20626879, [95, 110], American Trucking, TRUCKINGdotORG]|
+|[39076082, 39076082, [3, 17], Brian Cates, drawandstrike]         |
+|[39344374, 39344374, [3, 18], Donald Trump Jr., DonaldJTrumpJr]   |
+|[252176459, 252176459, [3, 16], USA en Español, USAenEspanol]     |
+|[16815644, 16815644, [3, 15], ABC News Politics, ABCPolitics]     |
+|[3044739166, 3044739166, [3, 18], Sara Nelson, FlyingWithSara]    |
+|[3161681103, 3161681103, [3, 15], Spencer Hsu, hsu_spencer]       |
++------------------------------------------------------------------+
+only showing top 10 rows
+
+flattened.select("user_mentions_flat.name")
++------------------+
+|name              |
++------------------+
+|Julio Gonzalez    |
+|CGC | Santiago    |
+|News Breaking LIVE|
+|American Trucking |
+|Brian Cates       |
+|Donald Trump Jr.  |
+|USA en Español    |
+|ABC News Politics |
+|Sara Nelson       |
+|Spencer Hsu       |
++------------------+
+only showing top 10 rows
+
+select name, count(name) as name_count from usermention group by name order by name_count desc limit 10
++--------------------+----------+
+|name                |name_count|
++--------------------+----------+
+|Donald J. Trump     |3454      |
+|Kyle Griffin        |1454      |
+|Jack Posobiec ??  |980       |
+|David Fahrenthold   |964       |
+|diana saw endgame ??|842       |
+|Adam Schiff         |778       |
+|Scott Dworkin       |758       |
+|Natasha Bertrand    |738       |
+|John Cardillo       |723       |
+|Matt Zapotosky      |697       |
++--------------------+----------+
+
+*****************************************************************************************
+Queries for Most number of Language used in each Country
+tweet.select("place.country", "lang").filter(tweet.col("place.country").isNotNull())
++-------------+----+
+|country      |lang|
++-------------+----+
+|United States|en  |
+|United States|en  |
+|United States|en  |
+|United States|en  |
+|Argentina    |es  |
+|Argentina    |es  |
+|Colombia     |es  |
+|United States|en  |
+|United States|en  |
+|United States|en  |
++-------------+----+
+only showing top 10 rows
+
+SELECT country, lang, count(lang) as lang_count from country_lang group by country, lang
++-------------+----+----------+
+|country      |lang|lang_count|
++-------------+----+----------+
+|United States|sv  |1         |
+|Deutschland  |tr  |1         |
+|Brasil       |pt  |13        |
+|Argentina    |es  |8         |
+|United States|in  |1         |
+|??         |und |1         |
+|Brasil       |en  |1         |
+|India        |it  |1         |
+|?????        |und |1         |
+|India        |hi  |1         |
++-------------+----+----------+
+only showing top 10 rows
+
+WITH cte as (select *, ROW_NUMBER() OVER (PARTITION BY country ORDER BY lang_count DESC) AS rn FROM country_lang_count) select * from cte where rn=1
++---------------------------+----+----------+---+
+|country                    |lang|lang_count|rn |
++---------------------------+----+----------+---+
+|Yemen                      |in  |2         |1  |
+|?????                      |und |1         |1  |
+|The Netherlands            |en  |1         |1  |
+|Italia                     |it  |2         |1  |
+|Malaysia                   |en  |1         |1  |
+|España                     |es  |2         |1  |
+|France                     |en  |1         |1  |
+|Republic of the Philippines|tl  |2         |1  |
+|??????? ??????? ????????   |ar  |1         |1  |
+|Argentina                  |es  |8         |1  |
++---------------------------+----+----------+---+
+only showing top 10 rows
+
+*****************************************************************************************
+Queries for Number of Users per year
+SELECT year(cast(to_timestamp(user.created_at, 'EEE MMM dd HH:mm:ss Z yyyy')as date)) as year, count(user.id)as user_count FROM tweet where group by year(cast(to_timestamp(user.created_at, 'EEE MMM dd HH:mm:ss Z yyyy')as date)) order by year(cast(to_timestamp(user.created_at, 'EEE MMM dd HH:mm:ss Z yyyy')as date))
++----+----------+
+|year|user_count|
++----+----------+
+|null|0         |
+|2006|35        |
+|2007|549       |
+|2008|3038      |
+|2009|14003     |
+|2010|8767      |
+|2011|10231     |
+|2012|9690      |
+|2013|8087      |
+|2014|7088      |
++----+----------+
+only showing top 10 rows
+
+result.select("year","user_count").filter(result.col("year").isNotNull())
++----+----------+
+|year|user_count|
++----+----------+
+|2006|35        |
+|2007|549       |
+|2008|3038      |
+|2009|14003     |
+|2010|8767      |
+|2011|10231     |
+|2012|9690      |
+|2013|8087      |
+|2014|7088      |
+|2015|6742      |
++----+----------+
+only showing top 10 rows
