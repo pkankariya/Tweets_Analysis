@@ -1,0 +1,40 @@
+JAVA Code execution
+
+Open powershell from the project folder
+
+mvn clean
+
+mvn package
+
+java -cp .\target\spark_project-0.0.1-SNAPSHOT-jar-with-dependencies.jar com.spark.helper.Driver
+
+Docker execution
+
+Command 1: 
+
+docker build -t writetextfileimage .
+
+Command 2:
+
+docker run -v C:/Users/Anurag/Desktop/docker-service/:/root/docker-service writetextfileimage
+
+docker run -v C:/Users/Anurag/Desktop/spark_project/:/root/spark_project sparkprojectimages
+
+docker login --username=pkankariya --email=pkkdg@mail.umkc.edu
+
+Tag image created
+
+	docker tag 2286fec48b7d pkankariya/poonamk:firsttry
+
+Push to repository
+
+	docker push pkankariya/poonamk
+	
+Pull from repository
+
+	docker pull pkankariya/poonamk:firsttry
+
+Run the project on Docker
+
+docker run -v C:/Users/Anurag/Desktop/PB_Final_Results/:/root/spark-project pkankariya/poonamk:firsttry 
+
